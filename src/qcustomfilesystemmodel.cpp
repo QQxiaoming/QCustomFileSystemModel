@@ -231,7 +231,9 @@ QModelIndex QCustomFileSystemModel::setRootPath(const QString &path) {
     QList<QCustomFileSystemItem*> dirItems;
     QList<QCustomFileSystemItem*> fileItems;
     for (int i = 0; i < rootEntries.count(); ++i) {
-        QString childPath = path + separator() + rootEntries.at(i);
+        QString childPath = separator() + rootEntries.at(i);
+        if(path != separator())
+            childPath = path + childPath;
         QCustomFileSystemItem *childItem = new QCustomFileSystemItem(childPath, m_rootItem);
         bool isDir = false;
         uint64_t size = 0;
