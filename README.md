@@ -62,7 +62,7 @@ void QCurrentNativeFileSystemModel::pathInfo(QString path, bool &isDir, uint64_t
 QTreeView *treeView = new QTreeView(this);
 QCurrentNativeFileSystemModel *model = new QCurrentNativeFileSystemModel(this);
 treeView->setModel(model);
-treeView->setRootIndex(fileSystemModel->setRootPath(QDir::homePath()));
+treeView->setRootIndex(model->setRootPath(QDir::homePath()));
 treeView->show();
 ```
 
@@ -152,7 +152,7 @@ void QSSHFileSystemModel::pathInfo(QString path, bool &isDir, uint64_t &size, QD
 QTreeView *treeView = new QTreeView(this);
 QSSHFileSystemModel *model = new QSSHFileSystemModel(this);
 treeView->setModel(model);
-treeView->setRootIndex(fileSystemModel->setRootPath("/"));
+treeView->setRootIndex(model->setRootPath("/"));
 treeView->show();
 ```
 
@@ -245,6 +245,6 @@ void QFTPFileSystemModel::pathInfo(QString path, bool &isDir, uint64_t &size, QD
 QTreeView *treeView = new QTreeView(this);
 QFTPFileSystemModel *model = new QFTPFileSystemModel(this);
 treeView->setModel(model);
-treeView->setRootIndex(fileSystemModel->setRootPath("ftp://ftp.gnu.org/gnu/"));
+treeView->setRootIndex(model->setRootPath("ftp://ftp.gnu.org/gnu/"));
 treeView->show();
 ```
