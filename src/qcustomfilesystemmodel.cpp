@@ -66,6 +66,8 @@ QModelIndex QCustomFileSystemModel::index(int row, int column, const QModelIndex
         parentItem = m_rootItem;
     else
         parentItem = static_cast<QCustomFileSystemItem*>(parent.internalPointer());
+    if(parentItem == nullptr)
+        return QModelIndex();
     QCustomFileSystemItem *childItem = parentItem->child(row);
     if (childItem)
         return createIndex(row, column, childItem);
@@ -78,6 +80,8 @@ QModelIndex QCustomFileSystemModel::parent(const QModelIndex &child) const {
         return QModelIndex();
     QCustomFileSystemItem *childItem = static_cast<QCustomFileSystemItem*>(child.internalPointer());
     QCustomFileSystemItem *parentItem = childItem->parent();
+    if(parentItem == nullptr)
+        return QModelIndex();
     if (parentItem == m_rootItem)
         return QModelIndex();
     return createIndex(parentItem->row(), 0, parentItem);
@@ -91,6 +95,8 @@ int QCustomFileSystemModel::rowCount(const QModelIndex &parent) const {
         parentItem = m_rootItem;
     else
         parentItem = static_cast<QCustomFileSystemItem*>(parent.internalPointer());
+    if(parentItem == nullptr)
+        return 0;
     return parentItem->childCount();
 }
 
@@ -142,18 +148,30 @@ void QCustomFileSystemModel::fetchMore(const QModelIndex &parent) {
         return;
     if(parentItem->child(0)->data().toString() != "")
         return;
+    QStringList entries = pathEntryList(parentItem->data().toString());
+    if(entries.count() == 0)
+        return;
     //remove dummy item
     parentItem->removeChild(0);
-    QStringList entries = pathEntryList(parentItem->data().toString());
+    QList<QCustomFileSystemItem*> dirItems;
+    QList<QCustomFileSystemItem*> fileItems;
     for (int i = 0; i < entries.count(); ++i) {
         QString childPath = parentItem->data().toString() + separator() + entries.at(i);
         QCustomFileSystemItem *childItem = new QCustomFileSystemItem(childPath, parentItem);
-        parentItem->appendChild(childItem);
         if (isDir(childPath)) {
+            dirItems.append(childItem);
             //add dummy item
             QCustomFileSystemItem *dummyItem = new QCustomFileSystemItem("", childItem);
             childItem->appendChild(dummyItem);
+        } else {
+            fileItems.append(childItem);
         }
+    }
+    foreach(QCustomFileSystemItem *item, dirItems) {
+        parentItem->appendChild(item);
+    }
+    foreach(QCustomFileSystemItem *item, fileItems) {
+        parentItem->appendChild(item);
     }
 }
 
@@ -171,16 +189,26 @@ QModelIndex QCustomFileSystemModel::setRootPath(const QString &path) {
     delete m_rootItem;
     m_rootItem = new QCustomFileSystemItem(path);
     m_rootPath = path;
-    QStringList rootEntries = pathEntryList(path);
+    QStringList rootEntries = pathEntryList(m_rootPath);
+    QList<QCustomFileSystemItem*> dirItems;
+    QList<QCustomFileSystemItem*> fileItems;
     for (int i = 0; i < rootEntries.count(); ++i) {
         QString childPath = path + separator() + rootEntries.at(i);
         QCustomFileSystemItem *childItem = new QCustomFileSystemItem(childPath, m_rootItem);
-        m_rootItem->appendChild(childItem);
         if (isDir(childPath)) {
+            dirItems.append(childItem);
             //add dummy item
             QCustomFileSystemItem *dummyItem = new QCustomFileSystemItem("", childItem);
             childItem->appendChild(dummyItem);
+        } else {
+            fileItems.append(childItem);
         }
+    }
+    foreach(QCustomFileSystemItem *item, dirItems) {
+        m_rootItem->appendChild(item);
+    }
+    foreach(QCustomFileSystemItem *item, fileItems) {
+        m_rootItem->appendChild(item);
     }
     endResetModel();
     return createIndex(0, 0, m_rootItem);
@@ -228,11 +256,18 @@ QVariant QNativeFileSystemModel::pathInfo(QString path, int type) const {
     case 2:
         if(info.isDir()) {
             QDir dir(path);
-            return dir.count()-2;
-        } else if(info.isFile())
-            return info.size();
-        else
-            return info.size();
+            return dir.count();
+        } else {
+            if( info.size() <= 1024) {
+                return QString("%1 B").arg(info.size());
+            } else if ( info.size() <= 1024 * 1024 ) {
+                return QString::number(info.size() / 1024.0, 'f', 2) + QString(" KB");
+            } else if ( info.size() <= 1024 * 1024 * 1024 ) {
+                return QString::number(info.size() / (1024.0 * 1024.0), 'f', 2) + QString(" MB");
+            } else {
+                return QString::number(info.size() / (1024.0 * 1024.0 * 1024.0), 'f', 2) + QString(" GB");
+            }
+        }
     case 3:
         return info.lastModified();
     case 4:

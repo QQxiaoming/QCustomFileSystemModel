@@ -57,7 +57,7 @@ public:
 
 private:
     QString m_rootPath;
-    QCustomFileSystemItem *m_rootItem;
+    QCustomFileSystemItem *m_rootItem = nullptr;
 };
 
 class QNativeFileSystemModel : public QCustomFileSystemModel
