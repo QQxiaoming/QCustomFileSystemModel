@@ -247,6 +247,7 @@ class QCustomFileSystemModel(QAbstractItemModel):
 class QNativeFileSystemModel(QCustomFileSystemModel):
     def __init__(self, parent=None):
         super(QNativeFileSystemModel, self).__init__(parent)
+        self.m_hideFiles = False
 
     def separator(self):
         return QDir.separator()
@@ -261,7 +262,16 @@ class QNativeFileSystemModel(QCustomFileSystemModel):
         for item in dir_list:
             if item == '.' or item == '..':
                 dir_list.remove(item)
-        return dir_list
+        if not self.m_hideFiles:
+            # remove hidden files
+            remove_list = []
+            for item in dir_list:
+                if item.startswith('.'):
+                    continue
+                remove_list.append(item)
+            return remove_list
+        else:
+            return dir_list
 
     def pathInfo(self, path):
         qdir = QFileInfo(path)
@@ -269,6 +279,12 @@ class QNativeFileSystemModel(QCustomFileSystemModel):
         size = qdir.size()
         lastModified = qdir.lastModified()
         return isDir, size, lastModified
+
+    def setHideFiles(self, enable):
+        self.m_hideFiles = enable
+
+    def hideFiles(self):
+        return self.m_hideFiles
 
 if __name__ == "__main__":
     import sys
@@ -281,7 +297,7 @@ if __name__ == "__main__":
     view.setColumnWidth(1, 60)
     view.setColumnWidth(2, 100)
     view.setColumnWidth(3, 100)
-    view.setRootIndex(fileSystemModel.setRootPath('/'))
+    view.setRootIndex(fileSystemModel.setRootPath(QDir.homePath()))
     view.resize(640, 480)
     view.show()
     sys.exit(app.exec())

@@ -9,7 +9,7 @@ CONFIG += c++17
 DEFINES += QT_DEPRECATED_WARNINGS
 QMAKE_CXXFLAGS += -Wno-deprecated-copy
 
-include(../src/qcustomfilesystemmodel.pri)
+include(../../src/cpp/qcustomfilesystemmodel.pri)
 
 SOURCES += \
     main.cpp

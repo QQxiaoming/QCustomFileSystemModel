@@ -11,6 +11,7 @@ QCustomFileSystemItem::QCustomFileSystemItem(const QString &path, QCustomFileSys
 
 QCustomFileSystemItem::~QCustomFileSystemItem() {
     qDeleteAll(m_childItems);
+    m_parentItem = nullptr;
 }
 
 void QCustomFileSystemItem::appendChild(QCustomFileSystemItem *child) {
@@ -61,7 +62,7 @@ QModelIndex QCustomFileSystemModel::index(int row, int column, const QModelIndex
     if (!hasIndex(row, column, parent))
         return QModelIndex();
     QCustomFileSystemItem *parentItem;
-    if (!parent.isValid())
+    if (!parent.isValid() || !indexValid(parent))
         parentItem = m_rootItem;
     else
         parentItem = static_cast<QCustomFileSystemItem*>(parent.internalPointer());
@@ -77,6 +78,8 @@ QModelIndex QCustomFileSystemModel::index(int row, int column, const QModelIndex
 QModelIndex QCustomFileSystemModel::parent(const QModelIndex &child) const {
     if (!child.isValid())
         return QModelIndex();
+    if(!indexValid(child))
+        return QModelIndex();
     QCustomFileSystemItem *childItem = static_cast<QCustomFileSystemItem*>(child.internalPointer());
     QCustomFileSystemItem *parentItem = childItem->parent();
     if(parentItem == nullptr)
@@ -90,7 +93,7 @@ int QCustomFileSystemModel::rowCount(const QModelIndex &parent) const {
     QCustomFileSystemItem *parentItem;
     if (parent.column() > 0)
         return 0;
-    if (!parent.isValid())
+    if (!parent.isValid() || !indexValid(parent))
         parentItem = m_rootItem;
     else
         parentItem = static_cast<QCustomFileSystemItem*>(parent.internalPointer());
@@ -100,7 +103,7 @@ int QCustomFileSystemModel::rowCount(const QModelIndex &parent) const {
 }
 
 int QCustomFileSystemModel::columnCount(const QModelIndex &parent) const {
-    if (parent.isValid())
+    if (parent.isValid() && indexValid(parent))
         return static_cast<QCustomFileSystemItem*>(parent.internalPointer())->columnCount();
     else
         return m_rootItem->columnCount();
@@ -108,6 +111,8 @@ int QCustomFileSystemModel::columnCount(const QModelIndex &parent) const {
 
 QVariant QCustomFileSystemModel::data(const QModelIndex &index, int role) const {
     if (!index.isValid())
+        return QVariant();
+    if (!indexValid(index))
         return QVariant();
     if (role != Qt::DisplayRole && role != Qt::DecorationRole)
         return QVariant();
@@ -170,6 +175,8 @@ QVariant QCustomFileSystemModel::headerData(int section, Qt::Orientation orienta
 void QCustomFileSystemModel::fetchMore(const QModelIndex &parent) {
     if (!parent.isValid())
         return;
+    if (!indexValid(parent))
+        return;
     QCustomFileSystemItem *parentItem = static_cast<QCustomFileSystemItem*>(parent.internalPointer());
     if(parentItem->childCount() != 1)
         return;
@@ -213,6 +220,8 @@ void QCustomFileSystemModel::fetchMore(const QModelIndex &parent) {
 
 bool QCustomFileSystemModel::canFetchMore(const QModelIndex &parent) const {
     if (!parent.isValid())
+        return false;
+    if (!indexValid(parent))
         return false;
     QCustomFileSystemItem *parentItem = static_cast<QCustomFileSystemItem*>(parent.internalPointer());
     if(parentItem->childCount() != 1)
@@ -270,6 +279,8 @@ QString QCustomFileSystemModel::rootPath() {
 QString QCustomFileSystemModel::filePath(const QModelIndex &index) {
     if (!index.isValid())
         return "";
+    if (!indexValid(index))
+        return "";
     QCustomFileSystemItem *item = static_cast<QCustomFileSystemItem*>(index.internalPointer());
     return item->data().toString();
 }
@@ -287,7 +298,10 @@ QString QNativeFileSystemModel::separator() const {
 
 QStringList QNativeFileSystemModel::pathEntryList(const QString &path) {
     QDir dir(path);
-    return dir.entryList(QDir::NoDotAndDotDot | QDir::AllEntries | QDir::Hidden);
+    if(m_hideFiles)
+        return dir.entryList(QDir::NoDotAndDotDot | QDir::AllEntries | QDir::Hidden);
+    else
+        return dir.entryList(QDir::NoDotAndDotDot | QDir::AllEntries);
 }
 
 void QNativeFileSystemModel::pathInfo(QString path, bool &isDir, uint64_t &size, QDateTime &lastModified) {

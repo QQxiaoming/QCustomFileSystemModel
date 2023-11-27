@@ -41,6 +41,11 @@ public:
     explicit QCustomFileSystemModel(QObject *parent = 0);
     ~QCustomFileSystemModel();
 
+
+    inline bool indexValid(const QModelIndex &index) const {
+         return (index.row() >= 0) && (index.column() >= 0) && (index.model() == this);
+    }
+
     QModelIndex index(int row, int column, const QModelIndex &parent) const;
     QModelIndex parent(const QModelIndex &child) const;
 
@@ -76,9 +81,15 @@ public:
     explicit QNativeFileSystemModel(QObject *parent = 0);
     ~QNativeFileSystemModel();
 
-    QString separator() const;
-    QStringList pathEntryList(const QString &path);
-    void pathInfo(QString path, bool &isDir, uint64_t &size, QDateTime &lastModified);
+    QString separator() const override;
+    QStringList pathEntryList(const QString &path) override;
+    void pathInfo(QString path, bool &isDir, uint64_t &size, QDateTime &lastModified) override;
+
+    void setHideFiles(bool hideFiles) { m_hideFiles = hideFiles; }
+    bool hideFiles() const { return m_hideFiles; }
+
+private:
+    bool m_hideFiles = false;
 };
 
 
