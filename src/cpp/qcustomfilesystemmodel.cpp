@@ -30,7 +30,6 @@ QCustomFileSystemItem::QCustomFileSystemItem(const QString &path, QCustomFileSys
 
 QCustomFileSystemItem::~QCustomFileSystemItem() {
     qDeleteAll(m_childItems);
-    m_parentItem = nullptr;
 }
 
 void QCustomFileSystemItem::appendChild(QCustomFileSystemItem *child) {
@@ -95,6 +94,8 @@ QModelIndex QCustomFileSystemModel::index(int row, int column, const QModelIndex
 }
 
 QModelIndex QCustomFileSystemModel::parent(const QModelIndex &child) const {
+    if(m_rootItem == nullptr)
+        return QModelIndex();
     if (!child.isValid())
         return QModelIndex();
     if(!indexValid(child))
@@ -253,7 +254,8 @@ bool QCustomFileSystemModel::canFetchMore(const QModelIndex &parent) const {
 QModelIndex QCustomFileSystemModel::setRootPath(const QString &path) {
     beginResetModel();
     delete m_rootItem;
-    m_rootItem = new QCustomFileSystemItem(path);
+    m_rootItem = nullptr;
+    QCustomFileSystemItem *rootItem = new QCustomFileSystemItem(path);
     m_rootPath = path;
     QStringList rootEntries = pathEntryList(m_rootPath);
     QList<QCustomFileSystemItem*> dirItems;
@@ -262,7 +264,7 @@ QModelIndex QCustomFileSystemModel::setRootPath(const QString &path) {
         QString childPath = separator() + rootEntries.at(i);
         if(path != separator())
             childPath = path + childPath;
-        QCustomFileSystemItem *childItem = new QCustomFileSystemItem(childPath, m_rootItem);
+        QCustomFileSystemItem *childItem = new QCustomFileSystemItem(childPath, rootItem);
         bool isDir = false;
         uint64_t size = 0;
         QDateTime lastModified = QDateTime();
@@ -282,13 +284,15 @@ QModelIndex QCustomFileSystemModel::setRootPath(const QString &path) {
         }
     }
     foreach(QCustomFileSystemItem *item, dirItems) {
-        m_rootItem->appendChild(item);
+        rootItem->appendChild(item);
     }
     foreach(QCustomFileSystemItem *item, fileItems) {
-        m_rootItem->appendChild(item);
+        rootItem->appendChild(item);
     }
+    QModelIndex index = createIndex(0, 0, rootItem);
+    m_rootItem = rootItem;
     endResetModel();
-    return createIndex(0, 0, m_rootItem);
+    return index;
 }
 
 QString QCustomFileSystemModel::rootPath() {
