@@ -40,6 +40,11 @@ void QCustomFileSystemItem::removeChild(int row) {
     m_childItems.removeAt(row);
 }
 
+void QCustomFileSystemItem::removeChildren() {
+    qDeleteAll(m_childItems);
+    m_childItems.clear();
+}
+
 QCustomFileSystemItem *QCustomFileSystemItem::child(int row) {
     return m_childItems.value(row);
 }
@@ -306,6 +311,26 @@ QString QCustomFileSystemModel::filePath(const QModelIndex &index) {
         return "";
     QCustomFileSystemItem *item = static_cast<QCustomFileSystemItem*>(index.internalPointer());
     return item->data().toString();
+}
+
+void QCustomFileSystemModel::refresh(const QModelIndex &index) {
+    if (!index.isValid())
+        return;
+    if (!indexValid(index))
+        return;
+    QCustomFileSystemItem *item = static_cast<QCustomFileSystemItem*>(index.internalPointer());
+    if(item->data().toString() == "")
+        return;
+    if(item->parent() == nullptr)
+        return;
+    if(item->parent()->data().toString() == "")
+        return;
+    beginResetModel();
+    item->removeChildren();
+    QCustomFileSystemItem *dummyItem = new QCustomFileSystemItem("", item);
+    item->appendChild(dummyItem);
+    fetchMore(index);
+    endResetModel();
 }
 
 QNativeFileSystemModel::QNativeFileSystemModel(QObject *parent) 

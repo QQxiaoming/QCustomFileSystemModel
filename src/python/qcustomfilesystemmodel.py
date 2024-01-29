@@ -36,6 +36,9 @@ class QCustomFileSystemItem(object):
     def removeChild(self, row):
         self.m_childItems.pop(row)
 
+    def removeChildren(self):
+        self.m_childItems = []
+
     def child(self, row):
         return self.m_childItems[row]
 
@@ -261,6 +264,19 @@ class QCustomFileSystemModel(QAbstractItemModel):
         item = index.internalPointer()
         return item.data()
 
+    def refresh(self, index):
+        if not index.isValid():
+            return
+        item = index.internalPointer()
+        if item.childCount() == 1 and item.child(0).data() == "":
+            return
+        self.beginResetModel()
+        item.removeChildren()
+        dummyItem = QCustomFileSystemItem("", item)
+        item.appendChild(dummyItem)
+        self.fetchMore(index)
+        self.endResetModel()
+
 class QNativeFileSystemModel(QCustomFileSystemModel):
     def __init__(self, parent=None):
         super(QNativeFileSystemModel, self).__init__(parent)
@@ -305,7 +321,8 @@ class QNativeFileSystemModel(QCustomFileSystemModel):
 
 if __name__ == "__main__":
     import sys
-    from PySide6.QtWidgets import QApplication, QTreeView
+    from PySide6.QtWidgets import QApplication, QTreeView, QMenu
+    from PySide6.QtCore import QObject, SIGNAL, SLOT, QFileInfo, QFile, QIODevice, QPoint
     app = QApplication(sys.argv)
     view = QTreeView()
     fileSystemModel = QNativeFileSystemModel(view)
@@ -316,5 +333,56 @@ if __name__ == "__main__":
     view.setColumnWidth(3, 100)
     view.setRootIndex(fileSystemModel.setRootPath(QDir.homePath()))
     view.resize(640, 480)
+    view.setContextMenuPolicy(Qt.CustomContextMenu)
+    def showContextMenu(point):
+        menu = QMenu(view)
+        index = view.indexAt(point)
+        if index.isValid():
+            def newFolder(index):
+                path = fileSystemModel.filePath(index)
+                info = QFileInfo(path)
+                if not info.isDir():
+                    path = info.dir().path()
+                    dir = QDir(path)
+                    dir.mkdir("New Folder")
+                    fileSystemModel.refresh(index.parent())
+                else:
+                    dir = QDir(path)
+                    dir.mkdir("New Folder")
+                    fileSystemModel.refresh(index)
+            menu.addAction("New Folder", lambda: newFolder(index))
+            def newFile(index):
+                path = fileSystemModel.filePath(index)
+                info = QFileInfo(path)
+                if not info.isDir():
+                    path = info.dir().path()
+                    file = QFile(path + "/New File")
+                    file.open(QIODevice.WriteOnly)
+                    file.close()
+                    fileSystemModel.refresh(index.parent())
+                else:
+                    file = QFile(path + "/New File")
+                    file.open(QIODevice.WriteOnly)
+                    file.close()
+                    fileSystemModel.refresh(index)
+            menu.addAction("New File", lambda: newFile(index))
+            menu.addSeparator()
+            def delete(index):
+                path = fileSystemModel.filePath(index)
+                info = QFileInfo(path)
+                if info.isDir():
+                    dir = QDir(path)
+                    dir.removeRecursively()
+                else:
+                    file = QFile(path)
+                    file.remove()
+                fileSystemModel.refresh(index.parent())
+            menu.addAction("Delete", lambda: delete(index))
+        if menu.isEmpty():
+            del menu
+            return
+        menu.move(view.mapToGlobal(point) + QPoint(5, 5))
+        menu.show()
+    QObject.connect(view, SIGNAL("customContextMenuRequested(const QPoint&)"), showContextMenu)
     view.show()
     sys.exit(app.exec())

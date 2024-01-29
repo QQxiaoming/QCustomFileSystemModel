@@ -30,6 +30,7 @@ public:
 
     void appendChild(QCustomFileSystemItem *child);
     void removeChild(int row);
+    void removeChildren();
 
     QCustomFileSystemItem *child(int row);
     int childCount() const;
@@ -87,6 +88,8 @@ public:
     virtual QString separator() const = 0;
     virtual QStringList pathEntryList(const QString &path) = 0;
     virtual void pathInfo(QString path, bool &isDir, uint64_t &size, QDateTime &lastModified) = 0;
+
+    void refresh(const QModelIndex &index);
 
 private:
     QString m_rootPath;
