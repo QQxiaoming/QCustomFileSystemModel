@@ -322,7 +322,7 @@ class QNativeFileSystemModel(QCustomFileSystemModel):
 if __name__ == "__main__":
     import sys
     from PySide6.QtWidgets import QApplication, QTreeView, QMenu
-    from PySide6.QtCore import QObject, SIGNAL, SLOT, QFileInfo, QFile, QIODevice, QPoint
+    from PySide6.QtCore import QFile, QPoint, QIODevice
     app = QApplication(sys.argv)
     view = QTreeView()
     fileSystemModel = QNativeFileSystemModel(view)
@@ -379,10 +379,9 @@ if __name__ == "__main__":
                 fileSystemModel.refresh(index.parent())
             menu.addAction("Delete", lambda: delete(index))
         if menu.isEmpty():
-            del menu
             return
         menu.move(view.mapToGlobal(point) + QPoint(5, 5))
         menu.show()
-    QObject.connect(view, SIGNAL("customContextMenuRequested(const QPoint&)"), showContextMenu)
+    view.customContextMenuRequested.connect(showContextMenu)
     view.show()
     sys.exit(app.exec())
